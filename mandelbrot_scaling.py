@@ -56,8 +56,10 @@ def compute_grid(n_cpus):
             grid[row, :] = values
     else:
         # Pool of CPUs to compute rows in parallel
+        # Split the work into chunks of rows, one chunk per CPU
         with mp.Pool(processes=n_cpus) as pool:
-            for row, values in pool.imap_unordered(compute_row, row_args()):
+            for row, values in pool.imap_unordered(compute_row, 
+            row_args()):
                 grid[row, :] = values
     elapsed = time.perf_counter() - start
     return grid, elapsed

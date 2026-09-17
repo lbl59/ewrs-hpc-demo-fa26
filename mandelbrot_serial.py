@@ -17,11 +17,14 @@ OUT_PATH = "figures/mandelbrot_serial.png"
 
 def mandelbrot_point(cx, cy, max_iter):
     x, y = 0.0, 0.0
+    # if point remains bounded after max_iter iterations
+    # it is considered part of the Mandelbrot set
     for i in range(max_iter):
         x2 = x * x
         y2 = y * y
         if x2 + y2 > 4.0:  
-            # Point has escaped the Mandelbrot set, return the number of iterations
+            # Point has escaped the Mandelbrot set
+            # Return the number of iterations
             return i
         y = 2.0 * x * y + cy
         x = x2 - y2 + cx
@@ -31,8 +34,12 @@ def mandelbrot_point(cx, cy, max_iter):
 def compute_grid(width, height, xmin, xmax, ymin, ymax, max_iter):
     grid = np.empty((height, width), dtype=np.int32)
     for row in range(height):
+        # cy is the imaginary part of the complex number c
+        # derived from the row index and the y-axis range
         cy = ymin + (ymax - ymin) * row / (height - 1)
         for col in range(width):
+            # cx is the real part of the complex number c
+            # derived from the column index and the x-axis range
             cx = xmin + (xmax - xmin) * col / (width - 1)
             grid[row, col] = mandelbrot_point(cx, cy, max_iter)
     return grid
