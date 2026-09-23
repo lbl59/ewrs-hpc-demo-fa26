@@ -12,7 +12,7 @@
 
 module load gnu9/9.3.0
 module load openmpi4/4.0.5
-source ~/mandelbrot-env/bin/activate
+source ~/py_env/bin/activate
 
 rm -f figures/mandelbrot_scaling_hopper_mpi.csv figures/mandelbrot_memory_usage.csv figures/mandelbrot_overhead.csv
 
