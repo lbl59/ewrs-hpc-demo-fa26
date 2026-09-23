@@ -20,7 +20,6 @@ CSV_PATH = "figures/mandelbrot_scaling_hopper_serial.csv"
 MEMORY_CSV_PATH = "figures/mandelbrot_memory_usage_serial.csv"
 OUT_PATH = "figures/mandelbrot_hopper_serial.png"
 
-
 def main():
     grid = np.empty((HEIGHT, WIDTH), dtype=np.int32)
 

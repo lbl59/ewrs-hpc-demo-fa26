@@ -6,14 +6,10 @@
 #SBATCH --time=00:30:00
 #SBATCH --ntasks-per-node=40
 #SBATCH --ntasks-per-core=1
-#SBATCH --exclusive
 #SBATCH --mail-user=lbl59@cornell.edu
 #SBATCH --mail-type=ALL
 
-module load gnu9/9.3.0
-module load openmpi4/4.0.5
-source ~/py_env/bin/activate
-
+# remove old output files so we don't accidentally append to them
 rm -f figures/mandelbrot_scaling_hopper_mpi.csv figures/mandelbrot_memory_usage.csv figures/mandelbrot_overhead.csv
 
 # reuse this one 4-node allocation for the 1, 2, and 4 node runs by handing
@@ -25,5 +21,8 @@ NODES=($(scontrol show hostnames "${SLURM_JOB_NODELIST}"))
 for n in 1 2 4; do
     HOSTS=$(IFS=,; echo "${NODES[*]:0:$n}" | sed "s/,/:${TASKS_PER_NODE},/g")
     HOSTS="${HOSTS}:${TASKS_PER_NODE}"
-    mpirun --host "${HOSTS}" -np $((n * TASKS_PER_NODE)) python3 mandelbrot_scaling_hopper_mpi.py
+    mpirun --host "${HOSTS}" -np $((n * TASKS_PER_NODE)) python ./mandelbrot_scaling_hopper_mpi.py
 done
+
+
+

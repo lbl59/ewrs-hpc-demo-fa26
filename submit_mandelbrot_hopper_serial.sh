@@ -9,6 +9,8 @@
 
 OMP_NUM_THREADS=40
 
-source ~/mandelbrot-env/bin/activate
+python ./mandelbrot_scaling_hopper_serial.py
 
-python3 mandelbrot_scaling_hopper_serial.py
+
+
+
