@@ -182,6 +182,10 @@ def plot_scaling():
 
 
 def main():
+
+    # check if a log/ directory exists, and if not, create it
+    os.makedirs("log", exist_ok=True)
+
     p = argparse.ArgumentParser()
     p.add_argument("--plot", action="store_true",
                     help="skip computing; read the CSVs and (re)draw the scaling plots")

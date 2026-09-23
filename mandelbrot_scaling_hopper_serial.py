@@ -21,6 +21,10 @@ MEMORY_CSV_PATH = "figures/mandelbrot_memory_usage_serial.csv"
 OUT_PATH = "figures/mandelbrot_hopper_serial.png"
 
 def main():
+
+    # check if a log/ directory exists, and if not, create it
+    os.makedirs("log", exist_ok=True)
+    
     grid = np.empty((HEIGHT, WIDTH), dtype=np.int32)
 
     t0 = time.perf_counter()
