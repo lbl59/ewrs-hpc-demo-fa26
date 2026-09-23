@@ -44,7 +44,6 @@ SPEEDUP_OUT_PATH = "figures/mandelbrot_speedup_efficiency.png"
 MEMORY_OUT_PATH = "figures/mandelbrot_memory_usage.png"
 OVERHEAD_OUT_PATH = "figures/mandelbrot_overhead.png"
 
-
 def mandelbrot_point(cx, cy, max_iter):
     x, y = 0.0, 0.0
     for i in range(max_iter):
@@ -146,9 +145,9 @@ def plot_scaling():
 
     fig, ax = plt.subplots(figsize=(7, 5.5))
     ax.plot(nodes, times, marker="o", color="#5B7FA6", linewidth=2)
-    ax.set_xlabel("Number of nodes")
-    ax.set_ylabel("Time (s)")
-    ax.set_title(f"Mandelbrot ({WIDTH}x{HEIGHT}, {MAX_ITER} iter) runtime vs. node count -- Hopper")
+    ax.set_xlabel("Number of nodes", size=16)
+    ax.set_ylabel("Time (s)", size=16)
+    ax.set_title(f"Mandelbrot ({WIDTH}x{HEIGHT}, {MAX_ITER} iter) runtime vs. node count")
     ax.set_xticks(nodes)
     ax.grid(True, color="#E5E7EB", linewidth=0.8)
     fig.tight_layout()

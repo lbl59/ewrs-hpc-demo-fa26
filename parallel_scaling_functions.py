@@ -32,10 +32,10 @@ def plot_speedup_efficiency(nodes, speedup, efficiency, out_path, title=None):
     line_efficiency, = ax2.plot(nodes, efficiency, marker="s", color="#C97064",
                                  linewidth=2, label="Efficiency")
 
-    ax1.set_xlabel("Number of nodes")
-    ax1.set_ylabel("Speedup", color="#5B7FA6")
+    ax1.set_xlabel("Number of nodes", size=14)
+    ax1.set_ylabel("Speedup", color="#5B7FA6", size=16)
     ax1.tick_params(axis="y", colors="#5B7FA6")
-    ax2.set_ylabel("Efficiency", color="#C97064")
+    ax2.set_ylabel("Efficiency", color="#C97064", size=16)
     ax2.tick_params(axis="y", colors="#C97064")
     ax2.set_ylim(0, 1.1)
     ax1.set_xticks(nodes)
@@ -44,7 +44,7 @@ def plot_speedup_efficiency(nodes, speedup, efficiency, out_path, title=None):
         ax1.set_title(title)
 
     lines = [line_speedup, line_efficiency]
-    ax1.legend(lines, [l.get_label() for l in lines], loc="upper left")
+    ax1.legend(lines, [l.get_label() for l in lines], loc="lower right", frameon=False)
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
@@ -91,10 +91,10 @@ def plot_memory_usage(nodes, mean_mb_per_rank, memory_efficiency, out_path, titl
     line_eff, = ax2.plot(nodes, memory_efficiency, marker="s", color="#C97064",
                           linewidth=2, label="Memory efficiency")
 
-    ax1.set_xlabel("Number of nodes")
-    ax1.set_ylabel("Mean peak memory per rank (MB)", color="#5B7FA6")
+    ax1.set_xlabel("Number of nodes", size=16)
+    ax1.set_ylabel("Mean peak memory per rank (MB)", color="#5B7FA6", size=14)
     ax1.tick_params(axis="y", colors="#5B7FA6")
-    ax2.set_ylabel("Memory efficiency", color="#C97064")
+    ax2.set_ylabel("Memory efficiency", color="#C97064", size=16)
     ax2.tick_params(axis="y", colors="#C97064")
     ax2.set_ylim(0, 1.1)
     ax1.set_xticks(nodes)
@@ -103,7 +103,7 @@ def plot_memory_usage(nodes, mean_mb_per_rank, memory_efficiency, out_path, titl
         ax1.set_title(title)
 
     lines = [line_mem, line_eff]
-    ax1.legend(lines, [l.get_label() for l in lines], loc="upper right")
+    ax1.legend(lines, [l.get_label() for l in lines], loc="upper right", frameon=False)
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
@@ -141,9 +141,9 @@ def plot_overhead(nodes, compute_seconds, overhead_seconds, out_path, title=None
     line, = ax2.plot(nodes, fraction_pct, marker="o", color="#2E2E2E",
                       linewidth=2, label="Overhead (% of total)")
 
-    ax1.set_xlabel("Number of nodes")
-    ax1.set_ylabel("Time (s)")
-    ax2.set_ylabel("Overhead fraction (%)")
+    ax1.set_xlabel("Number of nodes", size=14)
+    ax1.set_ylabel("Time (s)", size=16)
+    ax2.set_ylabel("Overhead fraction (%)", size=16)
     ax2.set_ylim(0, max(100.0, max(fraction_pct) * 1.2))
     ax1.set_xticks(nodes)
     ax1.grid(True, axis="y", color="#E5E7EB", linewidth=0.8)
@@ -151,7 +151,7 @@ def plot_overhead(nodes, compute_seconds, overhead_seconds, out_path, title=None
         ax1.set_title(title)
 
     handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles + [line], labels + [line.get_label()], loc="upper right")
+    ax1.legend(handles + [line], labels + [line.get_label()], loc="upper right", frameon=False)
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)

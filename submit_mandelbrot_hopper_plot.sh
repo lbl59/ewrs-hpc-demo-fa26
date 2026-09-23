@@ -9,6 +9,5 @@
 
 module load gnu9/9.3.0
 module load openmpi4/4.0.5
-source ~/mandelbrot-env/bin/activate
 
 python3 mandelbrot_scaling_hopper_mpi.py --plot
