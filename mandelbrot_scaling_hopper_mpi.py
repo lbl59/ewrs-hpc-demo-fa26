@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Mandelbrot runtime vs. number of MPI ranks (1-16), for Cornell's Hopper cluster.
+"""Mandelbrot runtime vs. number of Hopper compute nodes (1, 2, 4).
 
-MPI rank count is fixed per launch, so this script does one thing per
+Node count is fixed per launch, so this script does one thing per
 invocation: compute the grid at whatever COMM_WORLD size it was launched
-with (mpiexec -n N ...) and append the timing to a CSV. Run --plot
-afterwards to read the CSV and draw ranks-vs-time.
+with (srun -N <nodes> ...), and append the timing, peak memory use, and
+job/communication overhead to CSVs. Run --plot afterwards to read those
+CSVs and draw the runtime/speedup/efficiency, memory, and overhead figures.
 """
 
 import argparse
@@ -16,13 +17,32 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-WIDTH = 1024
-HEIGHT = 1024
-MAX_ITER = 500
+from parallel_scaling_functions import (
+    compute_speedup,
+    compute_efficiency,
+    plot_speedup_efficiency,
+    get_peak_memory_mb,
+    record_memory_usage,
+    compute_memory_efficiency,
+    plot_memory_usage,
+    record_overhead,
+    plot_overhead,
+)
+
+WIDTH = 6144
+HEIGHT = 6144
+MAX_ITER = 2500
 XMIN, XMAX = -2.0, 0.5
 YMIN, YMAX = -1.25, 1.25
+
 CSV_PATH = "figures/mandelbrot_scaling_hopper_mpi.csv"
+MEMORY_CSV_PATH = "figures/mandelbrot_memory_usage.csv"
+OVERHEAD_CSV_PATH = "figures/mandelbrot_overhead.csv"
+
 OUT_PATH = "figures/mandelbrot_scaling_hopper_mpi.png"
+SPEEDUP_OUT_PATH = "figures/mandelbrot_speedup_efficiency.png"
+MEMORY_OUT_PATH = "figures/mandelbrot_memory_usage.png"
+OVERHEAD_OUT_PATH = "figures/mandelbrot_overhead.png"
 
 
 def mandelbrot_point(cx, cy, max_iter):
@@ -57,26 +77,38 @@ def run_mpi():
     from mpi4py import MPI
 
     comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()   # get the process number (0 to size-1)
-    size = comm.Get_size()   # get the total number of processes
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
-    # chunk the rows of the grid among the ranks
-    # so each rank computes a contiguous block of rows
+    t_start = MPI.Wtime()
+
+    # number of distinct nodes actually used, measured rather than
+    # trusted to a Slurm env var, since ranks may span srun sub-steps
+    hosts = comm.gather(MPI.Get_processor_name(), root=0)
+    n_nodes = len(set(hosts)) if rank == 0 else None
+    n_nodes = comm.bcast(n_nodes, root=0)
+
     starts, counts = row_partition(HEIGHT, size)
-    # each rank computes its own block of rows
     my_start, my_count = starts[rank], counts[rank]
 
-    # synchronize to ensure all ranks start timing at the same moment
     comm.Barrier()
-    t0 = MPI.Wtime()
+    t_compute_start = MPI.Wtime()
 
     local_rows = np.empty((my_count, WIDTH), dtype=np.int32)
     for i in range(my_count):
         row = my_start + i
         local_rows[i, :] = compute_row(row, WIDTH, HEIGHT, XMIN, XMAX, YMIN, YMAX, MAX_ITER)
 
-    elapsed = MPI.Wtime() - t0
-    elapsed = comm.allreduce(elapsed, op=MPI.MAX)
+    t_compute_end = MPI.Wtime()
+    my_peak_mb = get_peak_memory_mb()
+
+    compute_time = comm.allreduce(t_compute_end - t_compute_start, op=MPI.MAX)
+    setup_time = comm.allreduce(t_compute_start - t_start, op=MPI.MAX)
+    peak_mb_values = comm.gather(my_peak_mb, root=0)
+
+    t_end = MPI.Wtime()
+    commpost_time = comm.allreduce(t_end - t_compute_end, op=MPI.MAX)
+    overhead_time = setup_time + commpost_time
 
     if rank == 0:
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
@@ -84,39 +116,76 @@ def run_mpi():
         with open(CSV_PATH, "a", newline="") as f:
             writer = csv.writer(f)
             if write_header:
-                writer.writerow(["ranks", "seconds"])
-            writer.writerow([size, f"{elapsed:.6f}"])
-        print(f"ranks={size}: {elapsed:.3f}s (appended to {CSV_PATH})")
+                writer.writerow(["nodes", "ranks", "seconds"])
+            writer.writerow([n_nodes, size, f"{compute_time:.6f}"])
+
+        record_memory_usage(MEMORY_CSV_PATH, n_nodes, size, peak_mb_values)
+        record_overhead(OVERHEAD_CSV_PATH, n_nodes, size, compute_time, overhead_time)
+
+        print(f"nodes={n_nodes} ranks={size}: compute={compute_time:.3f}s "
+              f"overhead={overhead_time:.3f}s peak_mem_max={max(peak_mb_values):.1f}MB")
+
+
+def _read_csv_columns(path, columns):
+    rows = {}
+    with open(path, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            n = int(row["nodes"])
+            rows.setdefault(n, []).append([float(row[c]) for c in columns])
+    nodes = sorted(rows)
+    averaged = [
+        [sum(v[i] for v in rows[n]) / len(rows[n]) for i in range(len(columns))]
+        for n in nodes
+    ]
+    return nodes, list(zip(*averaged)) if averaged else [[] for _ in columns]
 
 
 def plot_scaling():
-    ranks, times = [], []
-    with open(CSV_PATH, "r", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            ranks.append(int(row["ranks"]))
-            times.append(float(row["seconds"]))
-    order = sorted(range(len(ranks)), key=lambda i: ranks[i])
-    ranks = [ranks[i] for i in order]
-    times = [times[i] for i in order]
+    nodes, (times,) = _read_csv_columns(CSV_PATH, ["seconds"])
 
     fig, ax = plt.subplots(figsize=(7, 5.5))
-    ax.plot(ranks, times, marker="o", color="#5B7FA6", linewidth=2)
-    ax.set_xlabel("Number of MPI ranks (CPUs)")
+    ax.plot(nodes, times, marker="o", color="#5B7FA6", linewidth=2)
+    ax.set_xlabel("Number of nodes")
     ax.set_ylabel("Time (s)")
-    ax.set_title(f"Mandelbrot ({WIDTH}x{HEIGHT}) runtime vs. CPU count -- Hopper")
-    ax.set_xticks(ranks)
+    ax.set_title(f"Mandelbrot ({WIDTH}x{HEIGHT}, {MAX_ITER} iter) runtime vs. node count -- Hopper")
+    ax.set_xticks(nodes)
     ax.grid(True, color="#E5E7EB", linewidth=0.8)
     fig.tight_layout()
     fig.savefig(OUT_PATH, dpi=150)
     plt.close(fig)
     print(f"Figure written to {OUT_PATH}")
 
+    speedup = compute_speedup(nodes, times)
+    efficiency = compute_efficiency(nodes, speedup)
+    plot_speedup_efficiency(
+        nodes, speedup, efficiency, SPEEDUP_OUT_PATH,
+        title=f"Mandelbrot ({WIDTH}x{HEIGHT}, {MAX_ITER} iter) speedup & efficiency -- Hopper",
+    )
+    print(f"Figure written to {SPEEDUP_OUT_PATH}")
+
+    mem_nodes, (mean_mb, total_mb) = _read_csv_columns(MEMORY_CSV_PATH, ["mean_mb", "total_mb"])
+    memory_efficiency = compute_memory_efficiency(list(total_mb))
+    plot_memory_usage(
+        mem_nodes, list(mean_mb), memory_efficiency, MEMORY_OUT_PATH,
+        title=f"Mandelbrot ({WIDTH}x{HEIGHT}) memory use vs. node count -- Hopper",
+    )
+    print(f"Figure written to {MEMORY_OUT_PATH}")
+
+    oh_nodes, (compute_s, overhead_s) = _read_csv_columns(
+        OVERHEAD_CSV_PATH, ["compute_seconds", "overhead_seconds"]
+    )
+    plot_overhead(
+        oh_nodes, list(compute_s), list(overhead_s), OVERHEAD_OUT_PATH,
+        title=f"Mandelbrot ({WIDTH}x{HEIGHT}) job/communication overhead vs. node count -- Hopper",
+    )
+    print(f"Figure written to {OVERHEAD_OUT_PATH}")
+
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--plot", action="store_true",
-                    help="skip computing; read the CSV and (re)draw the scaling plot")
+                    help="skip computing; read the CSVs and (re)draw the scaling plots")
     args = p.parse_args()
 
     if args.plot:
