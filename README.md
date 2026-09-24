@@ -1,6 +1,6 @@
 # ewrs-hpc-demo-fa26
 
-THis repo contains two presentations and a simple parallelization exercise built around the Mandelbrot set. The exercise is split into two types of parallel implementations detailed below. It is highly recommended to review the two presentations for background information and detailed step-by-step instructions prior to completing the exercise: 
+This repo contains two presentations and a simple parallelization exercise built around the Mandelbrot set. The exercise is split into two types of parallel implementations detailed below. It is highly recommended to review the two presentations for background information and detailed step-by-step instructions prior to completing the exercise: 
 
 - `EWRS_Seminar_HPC_intro.pptx` provides an introduction to setting up HPC workflows, with examples relevant to the Cornell Hopper Cluster. 
 - `EWRS_Seminar_HPC_demo.pptx` provides detailed step-by-step instructions on how to perform and measure parallel performance on both the cloud (Amazon AWS) and on the Hopper Cluster. 
